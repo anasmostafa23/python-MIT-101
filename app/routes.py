@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, Response
 from .database import User, Transaction, MLTask , db 
 from .utils import summarize_text
 from flask_login import login_user, logout_user, login_required, current_user
@@ -41,6 +41,7 @@ def login():
 def recharge():
     form = RechargeForm()
     if form.validate_on_submit():
+        print(f"This is current_user on recharge: {current_user}")
         current_user.balance += form.amount.data
         db.session.commit()
         return redirect(url_for('main_page.submit_task'))
@@ -49,25 +50,31 @@ def recharge():
 @main_page.route('/submit_task', methods=['GET', 'POST'])
 @login_required 
 def submit_task():
+
+    print('Hit submit route!')
     if request.method == 'POST':
         prompt = request.form['text_to_summarize']
+        ngrokUrl = request.form['ngrok_url']
+        print(f"Received prompt: {prompt}")
+        print(f"Received ngrokUrl: {ngrokUrl}")
         
-        if current_user.balance <= 0:
-            return jsonify({"message": "Insufficient balance"}), 400
-        print(f"Balance before deduction: {current_user.balance}")
-        current_user.balance -= 10
-        db.session.commit()
-        print(f"Balance after deduction: {current_user.balance}")
+        if current_user.balance > 0:
+             # Summarize the text
+            summary = summarize_text(prompt, ngrokUrl)
+            print('Recieved Summary {summary}')
+            # Save the task in the database
+            task = MLTask(user_id=current_user.id, prompt=prompt, result=summary)
+            db.session.add(task)
+            print(f"Balance before deduction: {current_user.balance}")
+            current_user.balance -= 10
+            print(f"Balance after deduction: {current_user.balance}")
+            db.session.commit()
+            return render_template('submit_task.html', summary=summary, prompt=prompt, ngrokUrl=ngrokUrl)
 
-        # Summarize the text
-        summary = summarize_text(prompt)
-        
-        # Save the task in the database
-        task = MLTask(user_id=current_user.id, prompt=prompt, result=summary)
-        db.session.add(task)
-        db.session.commit()
+        else:
+            error = "Insufficient Balance."
+            return render_template('submit_task.html', error=error, prompt=prompt, ngrokUrl=ngrokUrl)
 
-        return render_template('submit_task.html', summary=summary)
     return render_template('submit_task.html')
 
 @main_page.route('/admin/view_users')

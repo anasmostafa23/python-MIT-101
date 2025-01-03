@@ -1,12 +1,15 @@
 import os
 import requests
 
-def summarize_text(text):
+def summarize_text(text, ngrokUrl):
     """Send text to the external summarization service and return the summary."""
-    ngrok_url = os.getenv('NGROK_URL', input("Enter Ngrok URL: ")) 
+    if(not ngrokUrl):
+        ngrokUrl = os.getenv('NGROK_URL') 
+
+    print('Passed ngrokUrl: ', ngrokUrl)
     
     payload = {"text": text}
-    response = requests.post(f"{ngrok_url}/summarize", json=payload)
+    response = requests.post(f"{ngrokUrl}/summarize", json=payload)
     
     if response.status_code == 200:
         return response.json().get("summary", "No summary provided.")

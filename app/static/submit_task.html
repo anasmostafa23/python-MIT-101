@@ -1,75 +1,68 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>ML Service</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+  </head>
+  <body>
     <h1>Welcome to the ML Service</h1>
     <p>Submit prompts, view tasks, and manage your account.</p>
 
-    <!-- Form to enter Ngrok URL -->
-    <form id="ngrok-form">
-        <label for="ngrok_url">Enter Ngrok URL:</label>
-        <input type="text" id="ngrok_url" name="ngrok_url" required>
-        <button type="submit">Save URL</button>
-    </form>
-
-    <hr>
+    {% if error%}
+    <p><strong>{{error}}</strong></p>
+    {% endif%}
 
     <!-- Text Summarization Form -->
-    <form id="summarize-form">
-        <label for="text_to_summarize">Enter Text to Summarize:</label>
-        <textarea id="text_to_summarize" name="text_to_summarize" rows="4" required></textarea>
-        <button type="submit">Summarize</button>
+    <form id="summarize-form" method="POST" action="/submit_task">
+      <label for="ngrok_url">Enter Ngrok URL:</label>
+      <input
+        type="text"
+        id="ngrok_url"
+        name="ngrok_url"
+        {%
+        if
+        ngrokUrl
+        %}
+        value="{{ngrokUrl}}"
+        {%
+        endif
+        %}
+        required
+      />
+      <label for="text_to_summarize">Enter Text to Summarize:</label>
+      <textarea
+        id="text_to_summarize"
+        name="text_to_summarize"
+        rows="4"
+        required
+      >
+{{prompt}}</textarea
+      >
+      <button type="submit">Summarize</button>
     </form>
 
     <!-- Display the summarized text -->
     <h3>Summary:</h3>
-    <div id="summary-result"></div>
+    <div id="summary-result">{% if summary %} {{summary}} {% endif %}</div>
 
     <script>
-        // Handle Ngrok URL submission
-        document.getElementById('ngrok-form').addEventListener('submit', function(event) {
+      // Handle Summarization request
+      document
+        .getElementById("summarize-form")
+        .addEventListener("submit", function (event) {
+          const textToSummarize =
+            document.getElementById("text_to_summarize").value;
+          const ngrokURL = localStorage.getItem("ngrok_url"); // Retrieve URL from local storage
+
+          if (!ngrokURL) {
             event.preventDefault();
-
-            const ngrokURL = document.getElementById('ngrok_url').value;
-            localStorage.setItem('ngrok_url', ngrokURL);  // Store the URL in local storage
-
-            alert("Ngrok URL saved successfully!");
-        });
-
-        // Handle Summarization request
-        document.getElementById('summarize-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-
-            const textToSummarize = document.getElementById('text_to_summarize').value;
-            const ngrokURL = localStorage.getItem('ngrok_url');  // Retrieve URL from local storage
-
-            if (!ngrokURL) {
-                alert("Please enter the Ngrok URL first!");
-                return;
-            }
-
-            // Make the API request to the Ngrok URL
-            fetch(ngrokURL + '/summarize', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: textToSummarize })
-            })
-            .then(response => {console.log(JSON.stringify(response)); return response.json()})
-            
-            .then(data => {
-                if (data.summary) {
-                    document.getElementById('summary-result').innerText = data.summary;
-                } else {
-                    document.getElementById('summary-result').innerText = "Error: " + data.error;
-                }
-            })
-            .catch(error => {
-                document.getElementById('summary-result').innerText = "Error: " + error.message;
-            });
+            alert("Please enter the Ngrok URL first!");
+            return;
+          }
         });
     </script>
-</body>
+  </body>
 </html>
